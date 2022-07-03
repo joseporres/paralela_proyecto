@@ -13,31 +13,6 @@ typedef double type;
 
 // matriz de ejemplo Abdul Bari
 // https://www.youtube.com/watch?v=1FEP_sNb62k
-// adj_mat[0][0] = INF;
-// adj_mat[0][1] = 20;
-// adj_mat[0][2] = 30;
-// adj_mat[0][3] = 10;
-// adj_mat[0][4] = 11;
-// adj_mat[1][0] = 15;
-// adj_mat[1][1] = INF;
-// adj_mat[1][2] = 16;
-// adj_mat[1][3] = 4;
-// adj_mat[1][4] = 2;
-// adj_mat[2][0] = 3;
-// adj_mat[2][1] = 5;
-// adj_mat[2][2] = INF;
-// adj_mat[2][3] = 2;
-// adj_mat[2][4] = 4;
-// adj_mat[3][0] = 19;
-// adj_mat[3][1] = 6;
-// adj_mat[3][2] = 18;
-// adj_mat[3][3] = INF;
-// adj_mat[3][4] = 3;
-// adj_mat[4][0] = 16;
-// adj_mat[4][1] = 4;
-// adj_mat[4][2] = 7;
-// adj_mat[4][3] = 16;
-// adj_mat[4][4] = INF;
 
 const int N = 10;
 int myid, numprocs;
@@ -62,7 +37,7 @@ void fillMat(t_mat &mat)
     }
 }
 
-void printMat(t_mat adj_mat)
+void printMat(t_mat &adj_mat)
 {
     FOR(i, 0, N)
     {
@@ -75,7 +50,7 @@ void printMat(t_mat adj_mat)
     printf("\n");
 }
 
-pair<t_mat, type> reduceMat(t_mat adj_mat)
+type reduceMat(t_mat &adj_mat)
 {
     type cost = 0;
 
@@ -113,10 +88,11 @@ pair<t_mat, type> reduceMat(t_mat adj_mat)
             }
         }
     }
-    return {adj_mat, cost};
+    return cost;
+    // return {adj_mat, cost};
 }
 
-t_mat blockMat(t_mat mat, int src, int dest)
+t_mat blockMat(t_mat mat, int &src, int &dest)
 {
     mat[dest][0] = INF;
     FOR (i, 0, N) mat[src][i] = INF;
@@ -124,7 +100,7 @@ t_mat blockMat(t_mat mat, int src, int dest)
     return mat;
 }
 
-void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
+void BFS_BB(t_mat &mat, type cost, vector<int> &path, int src, vector<bool> &visited)
 {
     if (path.size() == N)
     {
@@ -140,12 +116,12 @@ void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
         priority_queue<pair<type, pair<int, t_mat>>> pq;
         FOR (dest, 0, N)
         {
-            if (find(path.begin(), path.end(), dest) == path.end())
+            if (!visited[dest])
             {
                 t_mat b_mat = blockMat(mat, src, dest);
-                auto res = reduceMat(b_mat);
-                type new_cost = (mat[src][dest] + cost + res.second);            
-                pq.push({-new_cost, {dest, res.first}});
+                type res = reduceMat(b_mat);
+                type new_cost = (mat[src][dest] + cost + res);            
+                pq.push({-new_cost, {dest, b_mat}});
             }
         }
         while (!pq.empty())
@@ -153,8 +129,10 @@ void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
             auto top = pq.top();
             pq.pop();
             path.push_back(top.second.first);
-            BFS_BB(top.second.second, -top.first, path, top.second.first);
+            visited[top.second.first] = true;
+            BFS_BB(top.second.second, -top.first, path, top.second.first, visited);
             path.pop_back();
+            visited[top.second.first] = false;
         }
     }
     // else
@@ -172,28 +150,41 @@ int main(int argc, char *argv[])
                                 "Barranco", "Rimac", "Los Olivos", "La Molina", 
                                 "La Victoria", "Magdalena", "San Borja"};
 
-    t_mat adj_mat = {
-        {INF,   4.6,    9,      11.3,   3.8,    12.3,   15.3,   4.9,    6.3,    8.8},
-        {4.6,   INF,    4.4,    6.9,    7.4,    16.8,   13.9,   2.8,    4.6,    5.6},
-        {9,     4.4,    INF,    2.7,    11.8,   21.3,   13.9,   6.5,    6.5,    6.1},
-        {11.3,  6.9,    2.7,    INF,    14.1,   23.5,   14.5,   8.3,    8.7,    7.4},
-        {3.8,   7.4,    11.8,   14.1,   INF,    11.4,   16,     6.6,    9.6,    10.3},
-        {12.3,  16.8,   21.3,   23.5,   11.4,   INF,    26.4,   16.4,   16.5,   20.2},
-        {15.3,  13.9,   13.9,   14.5,   16,     26.4,   INF,    11.7,   17.9,   8.8},
-        {4.9,   2.8,    6.5,    8.3,    6.6,    16.4,   11.7,   INF,    6.8,    4.3},
-        {6.3,   4.6,    6.5,    8.7,    9.6,    16.5,   17.9,   6.8,    INF,    9.2},
-        {8.8,   5.6,    6.1,    7.4,    10.3,   20.2,   8.8,    4.3,    9.2,    INF}};
+    // t_mat adj_mat = {
+    //     {INF,   4.6,    9,      11.3,   3.8,    12.3,   15.3,   4.9,    6.3,    8.8},
+    //     {4.6,   INF,    4.4,    6.9,    7.4,    16.8,   13.9,   2.8,    4.6,    5.6},
+    //     {9,     4.4,    INF,    2.7,    11.8,   21.3,   13.9,   6.5,    6.5,    6.1},
+    //     {11.3,  6.9,    2.7,    INF,    14.1,   23.5,   14.5,   8.3,    8.7,    7.4},
+    //     {3.8,   7.4,    11.8,   14.1,   INF,    11.4,   16,     6.6,    9.6,    10.3},
+    //     {12.3,  16.8,   21.3,   23.5,   11.4,   INF,    26.4,   16.4,   16.5,   20.2},
+    //     {15.3,  13.9,   13.9,   14.5,   16,     26.4,   INF,    11.7,   17.9,   8.8},
+    //     {4.9,   2.8,    6.5,    8.3,    6.6,    16.4,   11.7,   INF,    6.8,    4.3},
+    //     {6.3,   4.6,    6.5,    8.7,    9.6,    16.5,   17.9,   6.8,    INF,    9.2},
+    //     {8.8,   5.6,    6.1,    7.4,    10.3,   20.2,   8.8,    4.3,    9.2,    INF}};
 
+    t_mat adj_mat = {
+        {INF, 5.3, 10, 11.8, 3.5, 12.5, 21.4, 6.5, 6.9, 10.3},
+        {5.3, INF, 4.3, 7.7, 7.7, 17.5, 13.6, 2.8, 5.2, 6},
+        {10, 4.3, INF, 2.9, 13.9, 23.7, 16.6, 8.3, 7.1, 9},
+        {11.8, 7.7, 2.9, INF, 15, 24.8, 17.7, 9.4, 9.8, 10.1},
+        {3.5, 7.7, 13.9, 15, INF, 14.3, 21.5, 9.3, 9.9, 13.1},
+        {12.5, 17.5, 23.7, 24.8, 14.3, INF, 31.7, 18, 19, 27.9},
+        {21.4, 13.6, 16.6, 17.7, 21.5, 31.7, INF, 14.6, 17.3, 9.3},
+        {6.5, 2.8, 8.3, 9.4, 9.3, 18, 14.6, INF, 8.8, 4.7},
+        {6.9, 5.2, 7.1, 9.8, 9.9, 19, 17.3, 8.8, INF, 9.5},
+        {10.3, 6, 9, 10.1, 13.1, 27.9, 9.3, 4.7, 9.5, INF}};
+
+
+    vector<bool> visited(N, 0);
     double spe = 5;
 
-    auto res = reduceMat(adj_mat);
-    t_mat reduce_mat = res.first;
-    type cost = res.second;
+    type res = reduceMat(adj_mat);
     vector<int> path;
-    int start = 2;
+    int start = 1;
     path.push_back(start);
+    visited[start] = 1;
     clock_t beg = clock();
-    BFS_BB(reduce_mat, cost, path, start);
+    BFS_BB(adj_mat, res, path, start, visited);
     cout << "Time: " << double(clock()-beg)/CLOCKS_PER_SEC << endl;
     cout << "Best cost: " << upper << endl;
     cout << "Best path: " << endl;
