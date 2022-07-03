@@ -23,6 +23,8 @@ vector<int> best_path;
 
 using t_mat = vector<vector<type>>;
 
+omp_lock_t lock;
+
 void fillMat(t_mat &mat)
 {
     FOR(i, 0, N)
@@ -151,7 +153,7 @@ void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
     {
         priority_queue<pair<type, pair<int, t_mat>>> pq;
         int dest;
-        #pragma omp parallel for private(dest)
+        #pragma omp parallel for private(dest, path)
         for (dest = 0; dest < N; dest++)
         {
             if (find(path.begin(), path.end(), dest) == path.end())
@@ -181,48 +183,41 @@ void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
 int main(int argc, char *argv[])
 {
     omp_set_num_threads(5);
+    omp_init_lock(&lock);
 
-    t_mat adj_mat(N, vector<type>(N, 0));
-    fillMat(adj_mat);
-    // adj_mat[0][0] = INF;
-    // adj_mat[0][1] = 20;
-    // adj_mat[0][2] = 30;
-    // adj_mat[0][3] = 10;
-    // adj_mat[0][4] = 11;
-    // adj_mat[1][0] = 15;
-    // adj_mat[1][1] = INF;
-    // adj_mat[1][2] = 16;
-    // adj_mat[1][3] = 4;
-    // adj_mat[1][4] = 2;
-    // adj_mat[2][0] = 3;
-    // adj_mat[2][1] = 5;
-    // adj_mat[2][2] = INF;
-    // adj_mat[2][3] = 2;
-    // adj_mat[2][4] = 4;
-    // adj_mat[3][0] = 19;
-    // adj_mat[3][1] = 6;
-    // adj_mat[3][2] = 18;
-    // adj_mat[3][3] = INF;
-    // adj_mat[3][4] = 3;
-    // adj_mat[4][0] = 16;
-    // adj_mat[4][1] = 4;
-    // adj_mat[4][2] = 7;
-    // adj_mat[4][3] = 16;
-    // adj_mat[4][4] = INF;
+    vector<string> districts = {"Lima Centro", "Lince", "Miraflores", 
+                                "Barranco", "Rimac", "Los Olivos", "La Molina", 
+                                "La Victoria", "Magdalena", "San Borja"};
+
+    t_mat adj_mat = {
+        {INF,   4.6,    9,      11.3,   3.8,    12.3,   15.3,   4.9,    6.3,    8.8},
+        {4.6,   INF,    4.4,    6.9,    7.4,    16.8,   13.9,   2.8,    4.6,    5.6},
+        {9,     4.4,    INF,    2.7,    11.8,   21.3,   13.9,   6.5,    6.5,    6.1},
+        {11.3,  6.9,    2.7,    INF,    14.1,   23.5,   14.5,   8.3,    8.7,    7.4},
+        {3.8,   7.4,    11.8,   14.1,   INF,    11.4,   16,     6.6,    9.6,    10.3},
+        {12.3,  16.8,   21.3,   23.5,   11.4,   INF,    26.4,   16.4,   16.5,   20.2},
+        {15.3,  13.9,   13.9,   14.5,   16,     26.4,   INF,    11.7,   17.9,   8.8},
+        {4.9,   2.8,    6.5,    8.3,    6.6,    16.4,   11.7,   INF,    6.8,    4.3},
+        {6.3,   4.6,    6.5,    8.7,    9.6,    16.5,   17.9,   6.8,    INF,    9.2},
+        {8.8,   5.6,    6.1,    7.4,    10.3,   20.2,   8.8,    4.3,    9.2,    INF}};
+
+    double spe = 5;
 
     auto res = reduceMat(adj_mat);
     t_mat reduce_mat = res.first;
     type cost = res.second;
     vector<int> path;
-    int start = 0;
+    int start = 2;
     path.push_back(start);
-    double beg = omp_get_wtime();
+    clock_t beg = clock();
     BFS_BB(reduce_mat, cost, path, start);
-    cout << "Time: " << (omp_get_wtime()-beg) << endl;
+    cout << "Time: " << double(clock()-beg)/CLOCKS_PER_SEC << endl;
     cout << "Best cost: " << upper << endl;
     cout << "Best path: " << endl;
-    best_path.push_back(start);
-    for (auto it : best_path) cout << it << " ";
-    cout << endl;
+    for (auto it : best_path) cout << districts[it] << " -> ";
+    cout << districts[start] << endl;
+    cout << "Best time (h): " << endl;
+    cout << upper/spe << endl;
 
+    omp_destroy_lock(&lock);
 }
