@@ -11,7 +11,7 @@ using namespace std;
 
 typedef double type;
 
-const int N = 50;
+const int N = 10;
 int myid, numprocs;
 type global_min_cost;
 type INF = (1.0/0.0);
@@ -152,7 +152,7 @@ void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
         priority_queue<pair<type, pair<int, t_mat>>> pq;
         int dest;
         #pragma omp parallel for private(dest)
-        for (dest = 1; dest < N; dest++)
+        for (dest = 0; dest < N; dest++)
         {
             if (find(path.begin(), path.end(), dest) == path.end())
             {

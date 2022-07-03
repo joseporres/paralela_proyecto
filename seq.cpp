@@ -39,7 +39,7 @@ typedef double type;
 // adj_mat[4][3] = 16;
 // adj_mat[4][4] = INF;
 
-const int N = 50;
+const int N = 10;
 int myid, numprocs;
 type global_min_cost;
 type INF = (1.0/0.0);
@@ -138,7 +138,7 @@ void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
     if (cost < upper)
     {
         priority_queue<pair<type, pair<int, t_mat>>> pq;
-        FOR (dest, 1, N)
+        FOR (dest, 0, N)
         {
             if (find(path.begin(), path.end(), dest) == path.end())
             {
@@ -179,5 +179,20 @@ int main(int argc, char *argv[])
     cout << "Best path: " << endl;
     for (auto it : best_path) cout << it << " ";
     cout << endl;
+    // type sum = 0;
+    // FOR (i, 1, N)
+    // {
+    //     int src = best_path[i-1];
+    //     int dest = best_path[i];
+    //     type val = adj_mat[src][dest];
+    //     cout << src << " " << dest << ": " << val << endl;
+    //     sum += val;
+    // }
+    // int src = best_path.back();
+    // int dest = 0;
+    // type val = adj_mat[src][dest];
+    // cout << src << " " << dest << ": " << val << endl;
+    // sum += val;
+    // cout << sum;
 
 }
