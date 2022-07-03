@@ -12,6 +12,7 @@ using namespace std;
 typedef double type;
 
 const int N = 10;
+const int NUM_THREADS = 2;
 int myid, numprocs;
 type global_min_cost;
 type INF = (1.0/0.0);
@@ -34,7 +35,7 @@ void fillMat(t_mat &mat)
     }
 }
 
-void printMat(t_mat adj_mat)
+void printMat(t_mat &adj_mat)
 {
     FOR(i, 0, N)
     {
@@ -47,19 +48,18 @@ void printMat(t_mat adj_mat)
     printf("\n");
 }
 
-pair<t_mat, type> reduceMat(t_mat adj_mat)
+type reduceMat(t_mat &adj_mat)
 {
     type cost = 0;
 
     int i, j;
     // reduce row
-    #pragma omp parallel
+    #pragma omp parallel num_threads(NUM_THREADS)
     {
         #pragma omp for private(i, j) reduction(+:cost)
         for (i = 0; i < N; i++)
         {
             type min = adj_mat[i][0];
-            // #pragma omp parallel for private(j)
             for (j = 1; j < N; j++)
             {
                 if (adj_mat[i][j] < min)
@@ -70,8 +70,8 @@ pair<t_mat, type> reduceMat(t_mat adj_mat)
 
             if (min != INF and min != 0)
             {
+                // #pragma omp atomic update
                 cost += min;
-                // #pragma omp parallel for private(j)
                 for (j = 0; j < N; j++)
                 {
                     adj_mat[i][j] -= min;
@@ -80,13 +80,12 @@ pair<t_mat, type> reduceMat(t_mat adj_mat)
         }
     }
     // reduce col
-    #pragma omp parallel
+    #pragma omp parallel num_threads(NUM_THREADS)
     {
         #pragma omp for private(i, j) reduction(+:cost)
         for (i = 0; i < N; i++)
         {
             type min = adj_mat[0][i];
-            // #pragma omp parallel for private(j)
             for (j = 1; j < N; j++)
             {
                 if (adj_mat[j][i] < min)
@@ -98,7 +97,6 @@ pair<t_mat, type> reduceMat(t_mat adj_mat)
             {
                 // #pragma omp atomic update 
                 cost += min;
-                // #pragma omp parallel for private(j)
                 for (j = 0; j < N; j++)
                 {
                     adj_mat[j][i] -= min;
@@ -106,30 +104,27 @@ pair<t_mat, type> reduceMat(t_mat adj_mat)
             }
         }
     }
-    return {adj_mat, cost};
+    return cost;
+    // return {adj_mat, cost};
 }
 
-t_mat blockMat(t_mat mat, int src, int dest)
+t_mat blockMat(t_mat mat, int &src, int &dest)
 {
     mat[dest][0] = INF;
     int i;
-    #pragma omp parallel
+    #pragma omp parallel num_threads(NUM_THREADS)
     {
-        #pragma omp for private(i) nowait
-        for (i = 0; i < N; i++)
-        {
-            mat[src][i] = INF;
-        }
         #pragma omp for private(i)
         for (i = 0; i < N; i++)
         {
+            mat[src][i] = INF;
             mat[i][dest] = INF;
         }
     }
     return mat;
 }
 
-void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
+void BFS_BB(t_mat &mat, type cost, vector<int> &path, int src)
 {
     if (path.size() == N)
     {
@@ -144,16 +139,16 @@ void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
     {
         priority_queue<pair<type, pair<int, t_mat>>> pq;
         int dest;
-        #pragma omp parallel for private(dest, path)
+        #pragma omp parallel for private(dest, path) num_threads(NUM_THREADS)
         for (dest = 0; dest < N; dest++)
         {
             if (find(path.begin(), path.end(), dest) == path.end())
             {
                 t_mat b_mat = blockMat(mat, src, dest);
                 auto res = reduceMat(b_mat);
-                type new_cost = (mat[src][dest] + cost + res.second);
-                #pragma omp critical
-                pq.push({-new_cost, {dest, res.first}});
+                type new_cost = (mat[src][dest] + cost + res);  
+                #pragma omp critical          
+                pq.push({-new_cost, {dest, b_mat}});
             }
         }
         while (!pq.empty())
@@ -173,47 +168,34 @@ void BFS_BB(t_mat mat, type cost, vector<int> path, int src)
 
 int main(int argc, char *argv[])
 {
-    omp_set_num_threads(2);
+    // t_mat adj_mat(N, vector<type>(N, 0));
+    // fillMat(adj_mat);
 
     vector<string> districts = {"Lima Centro", "Lince", "Miraflores", 
                                 "Barranco", "Rimac", "Los Olivos", "La Molina", 
                                 "La Victoria", "Magdalena", "San Borja"};
 
-    // t_mat adj_mat = {
-    //     {INF,   4.6,    9,      11.3,   3.8,    12.3,   15.3,   4.9,    6.3,    8.8},
-    //     {4.6,   INF,    4.4,    6.9,    7.4,    16.8,   13.9,   2.8,    4.6,    5.6},
-    //     {9,     4.4,    INF,    2.7,    11.8,   21.3,   13.9,   6.5,    6.5,    6.1},
-    //     {11.3,  6.9,    2.7,    INF,    14.1,   23.5,   14.5,   8.3,    8.7,    7.4},
-    //     {3.8,   7.4,    11.8,   14.1,   INF,    11.4,   16,     6.6,    9.6,    10.3},
-    //     {12.3,  16.8,   21.3,   23.5,   11.4,   INF,    26.4,   16.4,   16.5,   20.2},
-    //     {15.3,  13.9,   13.9,   14.5,   16,     26.4,   INF,    11.7,   17.9,   8.8},
-    //     {4.9,   2.8,    6.5,    8.3,    6.6,    16.4,   11.7,   INF,    6.8,    4.3},
-    //     {6.3,   4.6,    6.5,    8.7,    9.6,    16.5,   17.9,   6.8,    INF,    9.2},
-    //     {8.8,   5.6,    6.1,    7.4,    10.3,   20.2,   8.8,    4.3,    9.2,    INF}};
-
     t_mat adj_mat = {
-        {INF, 5.3, 10, 11.8, 3.5, 12.5, 21.4, 6.5, 6.9, 10.3},
-        {5.3, INF, 4.3, 7.7, 7.7, 17.5, 13.6, 2.8, 5.2, 6},
-        {10, 4.3, INF, 2.9, 13.9, 23.7, 16.6, 8.3, 7.1, 9},
-        {11.8, 7.7, 2.9, INF, 15, 24.8, 17.7, 9.4, 9.8, 10.1},
-        {3.5, 7.7, 13.9, 15, INF, 14.3, 21.5, 9.3, 9.9, 13.1},
-        {12.5, 17.5, 23.7, 24.8, 14.3, INF, 31.7, 18, 19, 27.9},
-        {21.4, 13.6, 16.6, 17.7, 21.5, 31.7, INF, 14.6, 17.3, 9.3},
-        {6.5, 2.8, 8.3, 9.4, 9.3, 18, 14.6, INF, 8.8, 4.7},
-        {6.9, 5.2, 7.1, 9.8, 9.9, 19, 17.3, 8.8, INF, 9.5},
-        {10.3, 6, 9, 10.1, 13.1, 27.9, 9.3, 4.7, 9.5, INF}};
+        {INF,   4.6,    9,      11.3,   3.8,    12.3,   15.3,   4.9,    6.3,    8.8},
+        {4.6,   INF,    4.4,    6.9,    7.4,    16.8,   13.9,   2.8,    4.6,    5.6},
+        {9,     4.4,    INF,    2.7,    11.8,   21.3,   13.9,   6.5,    6.5,    6.1},
+        {11.3,  6.9,    2.7,    INF,    14.1,   23.5,   14.5,   8.3,    8.7,    7.4},
+        {3.8,   7.4,    11.8,   14.1,   INF,    11.4,   16,     6.6,    9.6,    10.3},
+        {12.3,  16.8,   21.3,   23.5,   11.4,   INF,    26.4,   16.4,   16.5,   20.2},
+        {15.3,  13.9,   13.9,   14.5,   16,     26.4,   INF,    11.7,   17.9,   8.8},
+        {4.9,   2.8,    6.5,    8.3,    6.6,    16.4,   11.7,   INF,    6.8,    4.3},
+        {6.3,   4.6,    6.5,    8.7,    9.6,    16.5,   17.9,   6.8,    INF,    9.2},
+        {8.8,   5.6,    6.1,    7.4,    10.3,   20.2,   8.8,    4.3,    9.2,    INF}};
 
     double spe = 5;
 
     auto res = reduceMat(adj_mat);
-    t_mat reduce_mat = res.first;
-    type cost = res.second;
     vector<int> path;
-    int start = 1;
+    int start = 2;
     path.push_back(start);
-    clock_t beg = clock();
-    BFS_BB(reduce_mat, cost, path, start);
-    cout << "Time: " << double(clock()-beg)/CLOCKS_PER_SEC << endl;
+    double beg = omp_get_wtime();
+    BFS_BB(adj_mat, res, path, start);
+    cout << "Time: " << (omp_get_wtime()-beg) << endl;
     cout << "Best cost: " << upper << endl;
     cout << "Best path: " << endl;
     for (auto it : best_path) cout << districts[it] << " -> ";
