@@ -167,16 +167,19 @@ int main(int argc, char *argv[])
 {
     t_mat adj_mat(N, vector<type>(N, 0));
     fillMat(adj_mat);
+
     auto res = reduceMat(adj_mat);
     t_mat reduce_mat = res.first;
     type cost = res.second;
     vector<int> path;
-    path.push_back(0);
+    int start = 1;
+    path.push_back(start);
     clock_t beg = clock();
-    BFS_BB(reduce_mat, cost, path, 0);
+    BFS_BB(reduce_mat, cost, path, start);
     cout << "Time: " << double(clock()-beg)/CLOCKS_PER_SEC << endl;
     cout << "Best cost: " << upper << endl;
     cout << "Best path: " << endl;
+    best_path.push_back(start);
     for (auto it : best_path) cout << it << " ";
     cout << endl;
     // type sum = 0;

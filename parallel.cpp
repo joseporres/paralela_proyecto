@@ -214,12 +214,14 @@ int main(int argc, char *argv[])
     t_mat reduce_mat = res.first;
     type cost = res.second;
     vector<int> path;
-    path.push_back(0);
+    int start = 0;
+    path.push_back(start);
     double beg = omp_get_wtime();
-    BFS_BB(reduce_mat, cost, path, 0);
+    BFS_BB(reduce_mat, cost, path, start);
     cout << "Time: " << (omp_get_wtime()-beg) << endl;
     cout << "Best cost: " << upper << endl;
     cout << "Best path: " << endl;
+    best_path.push_back(start);
     for (auto it : best_path) cout << it << " ";
     cout << endl;
 
