@@ -242,12 +242,12 @@ int main(int argc, char *argv[])
     while(1)
     {
         system("clear");
-        printf("MENU DE OPCIONES: \n");
+        printf("MENÚ DE OPCIONES: \n");
         printf("1. Utilizar matriz existente\n");
         printf("2. Ingresar nueva matriz\n");
         printf("3. Calcular TSP desde un punto de inicio\n");
         printf("4. Calcular TSP desde todos los puntos de inicio\n");
-        printf("5. Exit\n");
+        printf("5. Salir\n");
 
         scanf("%d",&opcion_menu);
         printf("\n");
