@@ -110,7 +110,7 @@ type reduceMat(t_mat &adj_mat)
 
 t_mat blockMat(t_mat mat, int &src, int &dest)
 {
-    mat[dest][0] = INF;
+    mat[dest][src] = INF;
     int i;
     #pragma omp parallel num_threads(NUM_THREADS)
     {

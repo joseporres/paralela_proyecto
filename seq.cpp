@@ -26,6 +26,10 @@ vector<int> best_path;
 
 using t_mat = vector<vector<type>>;
 
+vector<string> districts = {"Lima Centro", "Lince", "Miraflores", 
+                            "Barranco", "Rimac", "Los Olivos", "La Molina", 
+                            "La Victoria", "Magdalena", "San Borja"};
+
 void fillMat(t_mat &mat)
 {
     FOR(i, 0, N)
@@ -94,7 +98,7 @@ type reduceMat(t_mat &adj_mat)
 
 t_mat blockMat(t_mat mat, int &src, int &dest)
 {
-    mat[dest][0] = INF;
+    mat[dest][src] = INF;
     FOR (i, 0, N) 
     {
         mat[src][i] = INF;
@@ -148,10 +152,6 @@ int main(int argc, char *argv[])
 {
     // t_mat adj_mat(N, vector<type>(N, 0));
     // fillMat(adj_mat);
-
-    vector<string> districts = {"Lima Centro", "Lince", "Miraflores", 
-                                "Barranco", "Rimac", "Los Olivos", "La Molina", 
-                                "La Victoria", "Magdalena", "San Borja"};
 
     t_mat adj_mat = {
         {INF,   4.6,    9,      11.3,   3.8,    12.3,   15.3,   4.9,    6.3,    8.8},
